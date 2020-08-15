@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Field Runner</title>
+	<script src="https://cdn.jsdelivr.net/npm/vue"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+	<style type="text/css">
+		canvas {
+			border: 1px solid purple;
+			position: absolute;
+			left: 15%;
+		}
+	</style>
+</head>
+<body onload="startGame()">
+	<button onclick="resetGame()">New Game</button>
+	<button onclick="movePlayer(true)">Boost!</button>
+
+	<script type="text/javascript">
+		/*
+
+		var canvas = document.getElementById("map");
+		var ctx = canvas.getContext("2d");
+		var context = canvas.getContext("2d");
+
+		var up, down, left, right;
+		var hit = false;
+		var position = "";
+
+		var xPos = 0;
+		var yPos = 0;
+
+		ctx.strokeStyle = "green";
+		ctx.rect(xPos, yPos, 50, 50);
+
+		ctx.strokeStyle = "red";
+		ctx.rect(70, 70, 50, 50);
+		context.stroke();
+
+
+		function move(e){
+			if (e.keyCode == 39 || e.keyCode == 68){
+				position = "right";
+				return;
+			}
+			if (e.keyCode == 37 || e.keyCode == 65){
+				position = "left";
+				return;
+			}
+			if (e.keyCode == 38 || e.keyCode == 87){
+				position = "up";
+				return;
+			}
+			if (e.keyCode == 40 || e.keyCode == 83){
+				position = "down";
+				return;
+			}
+
+			return;
+		}
+
+		function repaint(){
+			canvas.width = canvas.width;
+			ctx.strokeStyle= "green";
+			ctx.rect(xPos,yPos, 50, 50);
+
+			ctx.strokeStyle = "red";
+			ctx.rect(70, 70, 50, 50);
+
+			context.stroke();
+		}
+
+		function checkCollision(){ 
+			if ( (xPos < 0 || xPos > 450) || (yPos < 0 || yPos > 450) ){
+				xPos = 0;
+				yPos = 0;
+			}
+		}
+
+		*/
+
+
+		/* TO-DO: 
+			!!!!!--Make a "Game Over" screen
+
+			?????--New maps
+			?????--Enemies spawning on random places when you "jump"
+			?????--Fix walls so that players will be able to teleport
+			?????--Add a boost button with a delay
+
+			-------Tweak enemy speed update
+			-------Tweak the walls so they are not so big
+			-------Figure out start button
+			-------Figure out sounds and sound cancelation button
+			-------Fix images sizes
+		*/
+
+		var position = "";
+		var movement;
+		var hit = false;
+		var gameStarted = false;
+		var speed = 1;
+
+		var myGamePiece;
+		var myObstacles = [];
+		var myEnemies = [];
+		var myScore;
+		var EndingScreen;
+
+
+		function move(e){
+			hit = false;
+
+			if (e.keyCode == 39 || e.keyCode == 68){
+				position = "right";
+				return;
+			}
+			if (e.keyCode == 37 || e.keyCode == 65){
+				position = "left";
+				return;
+			}
+			if (e.keyCode == 38 || e.keyCode == 87){
+				position = "up";
+				return;
+			}
+			if (e.keyCode == 40 || e.keyCode == 83){
+				position = "down";
+				return;
+			}
+
+			return;
+		}
+
+		function startGame() {
+			gameStarted = true;
+		 	myGamePiece = new component(30, 30, "red", 30, 30); 
+		  	myScore = new component("20px", "Consolas", "black", 750, 40, "text");
+		  	EndingScreen = new component("20px", "Consolas", "black", 350, 140, "text");
+		  	buildWalls("purple");
+		  	initializeEnemies("blue");
+		  	myGameArea.start();
+		}
+
+		function resetGame(){
+			if (!gameStarted) {
+				position = "";
+				speed = 1;
+				myGameArea.frameNo = 0;
+				myEnemies = [];
+				startGame();
+			}
+		}
+
+		var myGameArea = {
+		  canvas : document.createElement("canvas"),
+		  start : function() {
+		    this.canvas.width = 900;
+		    this.canvas.height = 500;
+		    this.context = this.canvas.getContext("2d");
+		    document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+		    this.frameNo = 0; 
+		    this.interval = setInterval(updateGameArea, 20);
+		  },
+		  clear: function() {
+		  	this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+		  },
+		  slowed: function() {
+		  	hit = true;
+		  },
+		  stop : function() {
+		    clearInterval(this.interval);
+		    gameStarted = false;
+		    EndingScreen.text = "Game Over, Score: " + myGameArea.frameNo;
+		    EndingScreen.update();
+		  }
+		}
+
+
+		function everyinterval(n) {
+		  if ((myGameArea.frameNo / n) % 1 == 0) {return true;}
+		  return false;
+		}
+
+		function component(width, height, color, x, y, type) {
+		  this.width = width;
+		  this.height = height;
+		  this.x = x;
+		  this.y = y;
+		  this.type = type;
+		  if (type == "image") {
+	    	this.image = new Image();
+	    	this.image.src = color;
+		  }
+		  this.update = function(){
+		    ctx = myGameArea.context;
+		    if (this.type == "image") {
+			  	ctx.drawImage(this.image,
+			    this.x,
+			    this.y,
+			    this.width, this.height);
+			}	
+		    else if (this.type == "text") {
+		      	ctx.font = this.width + " " + this.height;
+		      	ctx.fillStyle = color;
+		      	ctx.fillText(this.text, this.x, this.y);
+		  	} else {
+		  		ctx.fillStyle = color;
+		    	ctx.fillRect(this.x, this.y, this.width, this.height);
+		  	}
+		  }
+		  this.crashWith = function(otherobj) {
+			    var myleft = this.x;
+			    var myright = this.x + (this.width);
+			    var mytop = this.y;
+			    var mybottom = this.y + (this.height);
+			    var otherleft = otherobj.x;
+			    var otherright = otherobj.x + (otherobj.width);
+			    var othertop = otherobj.y;
+			    var otherbottom = otherobj.y + (otherobj.height);
+			    var crash = true;
+			    if ((mybottom < othertop) ||
+			    (mytop > otherbottom) ||
+			    (myright < otherleft) ||
+			    (myleft > otherright)) {
+			      crash = false;
+			    }
+			    return crash;
+			}
+		}
+
+		function updateGameArea() {
+			var x, y;
+
+			myGameArea.clear();
+			myGameArea.frameNo += 1;
+			/*
+			if (myGameArea.frameNo == 1 || everyinterval(150)) {
+			    x = myGameArea.canvas.width;
+			    y = myGameArea.canvas.height - 200
+			    myObstacles.push(new component(10, 200, "green", x, y));
+			} */
+
+			myScore.text = "SCORE: " + myGameArea.frameNo;
+  			myScore.update();
+
+			for (i = 0; i < myObstacles.length; i += 1) {
+			    myObstacles[i].update();
+			    if (myGamePiece.crashWith(myObstacles[i])) {
+			      myGameArea.slowed();
+			      //return;
+			    }
+			} 
+
+			for (i = 0; i < myEnemies.length; i++) {
+				myEnemies[i].update();
+				moveEnemy(myEnemies[i]);
+				if (myGamePiece.crashWith(myEnemies[i])) {
+					myGameArea.stop();
+				}
+			}	
+			//moveEnemy(myEnemies[0]);
+			enemyCollision();
+
+			stayInBorders(myGamePiece);
+			myGamePiece.update();
+		}
+
+		document.onkeydown = move;
+
+		movement = setInterval(movePlayer, 20);
+
+		function movePlayer(boosted){
+			var speed = 3;
+
+			if(boosted){
+				speed += 10;
+			}
+
+			if(hit){
+				return;
+			}
+			if (position == "up") {
+				myGamePiece.y -= speed;
+			}
+			if (position == "right"){
+				myGamePiece.x += speed;
+			}
+			if (position == "left"){
+				myGamePiece.x -= speed;
+			}
+			if (position == "down"){
+				myGamePiece.y += speed;
+			}
+		}
+
+		function stayInBorders(charObj){
+			let canvas = document.getElementsByTagName("canvas");
+
+			if ( (charObj.x < 5 || charObj.x > canvas[0].width - 35) || (charObj.y < 5 || charObj.y > canvas[0].height - 35) ){
+				charObj.x = 30;
+				charObj.y = 30;
+			}
+		}
+
+		function initializeEnemies(color){
+			myEnemies.push(new component(40, 40, color, 340,240));
+			myEnemies.push(new component(40, 40, color, 830,30));
+			myEnemies.push(new component(40, 40, color, 830,440));
+			myEnemies.push(new component(40, 40, color, 30,440));
+		}
+
+		function moveEnemy(enemy){
+			if(myGameArea.frameNo % 1000 == 0){
+				speed += 0.05;
+			}
+
+			if(myGamePiece.x > enemy.x){
+				enemy.x += speed;
+			}
+			if(myGamePiece.x < enemy.x){
+				enemy.x -= speed;
+			}
+			if(myGamePiece.y > enemy.y){
+				enemy.y += speed;
+			}
+			if(myGamePiece.y < enemy.y){
+				enemy.y -= speed;
+			}
+		}
+
+		function enemyCollision(){
+			for (i = 0; i < myEnemies.length; i++) {
+				for (j = i + 1; j < myEnemies.length; j++) {
+					if(myEnemies[i].crashWith(myEnemies[j])){
+						moveEnemy(myEnemies[j]);
+					}
+				}
+			}
+		}
+
+		function buildWalls (color){
+			//Border walls
+			myObstacles.push(new component(10, 500, color, 890, 0)); //left most wall
+			myObstacles.push(new component(900, 10, color, 0, 490)); //down most wall
+			myObstacles.push(new component(10, 500, color, 0, 0)); //right most wall
+			myObstacles.push(new component(900, 10, color, 0, 0));  //up most wall
+
+			myObstacles.push(new component(10, 71, color, 250, 0));  //Left upper wall
+			myObstacles.push(new component(10, 71, color, 250, 429)); //Left lower wall
+
+			myObstacles.push(new component(10, 71, color, 650, 0));  //Right upper wall
+			myObstacles.push(new component(10, 71, color, 650, 429)); //Right lower wall
+
+			myObstacles.push(new component(300, 10, color, 305, 429)); //Middle lower wall
+			myObstacles.push(new component(300, 10, color, 305, 60)); //Middle upper wall
+
+			//Ghost Box
+			myObstacles.push(new component(300, 10, color, 305, 300)); //down most wall
+			myObstacles.push(new component(10, 90, color, 305, 210)); //left most wall
+			myObstacles.push(new component(10, 90, color, 595, 210)); //right most wall
+			myObstacles.push(new component(60, 10, color, 305, 209)); //upper left
+			myObstacles.push(new component(65, 10, color, 540, 209)); //upper right
+
+			myObstacles.push(new component(71, 10, color, 650, 350)); //Right middle lower wall
+			myObstacles.push(new component(71, 10, color, 650, 150)); //Right middle upper wall
+
+			myObstacles.push(new component(71, 10, color, 190, 350)); //Left middle lower wall
+			myObstacles.push(new component(71, 10, color, 190, 150));	//Left middle upper wall
+
+			//Right Lower L shaped wall
+			myObstacles.push(new component(71, 10, color, 750, 410));
+			myObstacles.push(new component(10, 120, color, 820, 300));
+
+			//Right Upper L shaped wall
+			myObstacles.push(new component(71, 10, color, 750, 100));
+			myObstacles.push(new component(10, 120, color, 820, 100));
+
+			//Left Lower L shaped wall
+			myObstacles.push(new component(71, 10, color, 100, 410));
+			myObstacles.push(new component(10, 120, color, 100, 300));
+
+			//Left Upper L spahed wall
+			myObstacles.push(new component(71, 10, color, 100, 100));
+			myObstacles.push(new component(10, 120, color, 100, 100));
+		}
+	</script>
+</body>
+</html>
